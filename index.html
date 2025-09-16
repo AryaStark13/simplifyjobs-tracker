@@ -443,6 +443,12 @@
             .controls-row {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 12px;
+            }
+
+            .update-btn {
+                width: 100%;
+                justify-content: center;
             }
 
             .filter-buttons {
@@ -474,6 +480,16 @@
                 and helps you track your 2026 New Grad position applications with status management and progress monitoring.
             </div>
             
+            <div class="legend" style="background: #e0f2fe; border: 1px solid #0288d1; margin-bottom: 16px;">
+                <h3 style="color: #01579b;">📱 Data Storage Info:</h3>
+                <div style="color: #0277bd; font-size: 13px;">
+                    Your application status and progress are saved locally in your browser and <strong>persist across page refreshes</strong>. 
+                    However, this data is <strong>device-specific</strong> and won't sync across different browsers/devices. 
+                    Data will be lost if you clear browser data, use incognito mode, or switch devices.
+                    <br><strong>💾 Backup Solution:</strong> Use Export/Import buttons above to transfer data between devices.
+                </div>
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div class="how-to-use">
                     <h3>How to Use:</h3>
@@ -523,6 +539,15 @@
                     <span>🔄</span>
                     Update Jobs
                 </button>
+                <button class="update-btn" style="background: #059669;" onclick="exportData()">
+                    <span>📥</span>
+                    Export Data
+                </button>
+                <button class="update-btn" style="background: #dc2626;" onclick="document.getElementById('import-file').click()">
+                    <span>📤</span>
+                    Import Data
+                </button>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
             </div>
             <div class="filter-buttons">
                 <button class="filter-btn active" data-filter="all">All Jobs</button>
@@ -975,9 +1000,14 @@
                 
                 // Check for ghosted applications after updating jobs
                 checkGhostedApplications();
+
+                // check how many new jobs were added
+                const cached = localStorage.getItem('cachedJobs');
+                const cachedJobs = cached ? JSON.parse(cached) : [];
+                const newJobsCount = allJobs.length - cachedJobs.length;
                 
                 renderJobs();
-                statusDiv.innerHTML = `<div class="update-status update-success">✅ Successfully updated ${allJobs.length} job listings!</div>`;
+                statusDiv.innerHTML = `<div class="update-status update-success">✅ Successfully added ${newJobsCount} job listings!</div>`;
                 
                 // Clear status after 3 seconds
                 setTimeout(() => {
@@ -1023,11 +1053,121 @@
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initApp);
 
+        // Export application data as JSON
+        function exportData() {
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                appliedJobs: [...appliedJobs],
+                jobStatuses: jobStatuses,
+                totalJobs: allJobs.length,
+                metadata: {
+                    totalApplications: appliedJobs.size,
+                    lastUpdate: localStorage.getItem('lastUpdate'),
+                    categories: [...new Set(allJobs.map(job => job.category))]
+                }
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `job-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            // Show success message
+            const statusDiv = document.getElementById('update-status');
+            statusDiv.innerHTML = '<div class="update-status update-success">📥 Application data exported successfully!</div>';
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        // Import application data from JSON file
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate the imported data structure
+                    if (!importedData.appliedJobs || !importedData.jobStatuses) {
+                        throw new Error('Invalid file format: Missing required data fields');
+                    }
+
+                    // Backup current data before importing (in case user wants to undo)
+                    const backupData = {
+                        appliedJobs: [...appliedJobs],
+                        jobStatuses: { ...jobStatuses }
+                    };
+                    localStorage.setItem('preImportBackup', JSON.stringify(backupData));
+
+                    // Import the data
+                    appliedJobs = new Set(importedData.appliedJobs);
+                    jobStatuses = importedData.jobStatuses;
+
+                    // Save to localStorage
+                    saveAppData();
+
+                    // Re-render the interface
+                    renderJobs();
+
+                    // Show success message with stats
+                    const totalImported = appliedJobs.size;
+                    const importDate = new Date(importedData.exportDate).toLocaleDateString();
+                    
+                    const statusDiv = document.getElementById('update-status');
+                    statusDiv.innerHTML = `
+                        <div class="update-status update-success">
+                            📤 Successfully imported ${totalImported} applications from backup (${importDate})!
+                            <div style="margin-top: 8px; font-size: 12px;">
+                                Previous data backed up automatically. Refresh to see updated statistics.
+                            </div>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        statusDiv.innerHTML = '';
+                    }, 5000);
+
+                } catch (error) {
+                    console.error('Import error:', error);
+                    const statusDiv = document.getElementById('update-status');
+                    statusDiv.innerHTML = `
+                        <div class="update-status update-error">
+                            ❌ Import failed: ${error.message}
+                            <div style="margin-top: 8px; font-size: 12px;">
+                                Please ensure you're uploading a valid job tracker backup file.
+                            </div>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        statusDiv.innerHTML = '';
+                    }, 5000);
+                }
+            };
+
+            reader.readAsText(file);
+            
+            // Reset the file input so the same file can be imported again if needed
+            event.target.value = '';
+        }
+
         // Make functions globally available
         window.toggleApplication = toggleApplication;
         window.updateJobsFromGitHub = updateJobsFromGitHub;
         window.updateJobStatus = updateJobStatus;
         window.toggleSection = toggleSection;
+        window.exportData = exportData;
+        window.importData = importData;
     </script>
 </body>
 </html>
