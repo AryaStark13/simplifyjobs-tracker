@@ -142,6 +142,106 @@
             margin-top: 4px;
         }
 
+        .tab-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            background: white;
+            color: #374151;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .tab-content {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .applied-jobs-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .applied-jobs-table th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .applied-jobs-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 13px;
+            vertical-align: top;
+        }
+
+        .applied-job-row {
+            transition: background-color 0.15s;
+        }
+
+        .applied-job-row:hover {
+            background: #f9fafb;
+        }
+
+        .applied-job-row.offer {
+            background: #d1fae5;
+        }
+
+        .applied-job-row.interview {
+            background: #fef3c7;
+        }
+
+        .applied-job-row.rejected {
+            background: #fee2e2;
+        }
+
+        .applied-status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-applied { background: #dbeafe; color: #1d4ed8; }
+        .status-oa-received { background: #fef3c7; color: #92400e; }
+        .status-oa-solved { background: #d1fae5; color: #065f46; }
+        .status-interview-call { background: #e0e7ff; color: #3730a3; }
+        .status-offer { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-ghosted { background: #f3f4f6; color: #6b7280; }
+
         .controls {
             background: white;
             border: 1px solid #e5e7eb;
@@ -384,16 +484,6 @@
             background: #047857;
         }
 
-        .no-sponsorship::after {
-            content: " 🛂";
-            font-size: 12px;
-        }
-
-        .us-citizenship::after {
-            content: " 🇺🇸";
-            font-size: 12px;
-        }
-
         .loading {
             text-align: center;
             padding: 40px;
@@ -502,13 +592,16 @@
                 </div>
                 
                 <div class="legend">
-                    <h3>Legend:</h3>
+                    <h3>Legend (Searchable):</h3>
                     <ul>
                         <li>🛂 Does NOT offer sponsorship</li>
                         <li>🇺🇸 Requires U.S. Citizenship</li>
                         <li>🔒 Job application is closed</li>
                         <li>🔥 FAANG+ company</li>
                     </ul>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">
+                        💡 Tip: Search using emojis (e.g., "🔥" for FAANG companies)
+                    </div>
                 </div>
             </div>
 
@@ -534,36 +627,88 @@
 
         <div class="controls">
             <div class="controls-row">
-                <input type="text" class="search-box" id="search" placeholder="Search companies, roles, or locations...">
-                <button class="update-btn" onclick="updateJobsFromGitHub()">
-                    <span>🔄</span>
-                    Update Jobs
-                </button>
-                <button class="update-btn" style="background: #059669;" onclick="exportData()">
-                    <span>📥</span>
-                    Export Data
-                </button>
-                <button class="update-btn" style="background: #dc2626;" onclick="document.getElementById('import-file').click()">
-                    <span>📤</span>
-                    Import Data
-                </button>
-                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="browse" onclick="switchTab('browse')">
+                        📋 Browse Jobs
+                    </button>
+                    <button class="tab-btn" data-tab="applied" onclick="switchTab('applied')">
+                        ✅ Applied Jobs
+                    </button>
+                </div>
             </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active" data-filter="all">All Jobs</button>
-                <button class="filter-btn" data-filter="not-applied">Not Applied</button>
-                <button class="filter-btn" data-filter="applied">Applied</button>
-                <button class="filter-btn" data-filter="oa-received">OA Received</button>
-                <button class="filter-btn" data-filter="oa-solved">OA Solved</button>
-                <button class="filter-btn" data-filter="interview-call">Interview</button>
-                <button class="filter-btn" data-filter="offer">Offer</button>
-                <button class="filter-btn" data-filter="rejected">Rejected</button>
-                <button class="filter-btn" data-filter="ghosted">Ghosted</button>
+            
+            <div id="browse-controls" class="tab-content">
+                <div class="controls-row">
+                    <input type="text" class="search-box" id="search" placeholder="Search companies, roles, or locations...">
+                    <button class="update-btn" onclick="updateJobsFromGitHub()">
+                        <span>🔄</span>
+                        Update Jobs
+                    </button>
+                    <button class="update-btn" style="background: #059669;" onclick="exportData()">
+                        <span>📥</span>
+                        Export Data
+                    </button>
+                    <button class="update-btn" style="background: #dc2626;" onclick="document.getElementById('import-file').click()">
+                        <span>📤</span>
+                        Import Data
+                    </button>
+                    <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">All Jobs</button>
+                    <button class="filter-btn" data-filter="not-applied">Not Applied</button>
+                    <button class="filter-btn" data-filter="applied">Applied</button>
+                    <button class="filter-btn" data-filter="oa-received">OA Received</button>
+                    <button class="filter-btn" data-filter="oa-solved">OA Solved</button>
+                    <button class="filter-btn" data-filter="interview-call">Interview</button>
+                    <button class="filter-btn" data-filter="offer">Offer</button>
+                    <button class="filter-btn" data-filter="rejected">Rejected</button>
+                    <button class="filter-btn" data-filter="ghosted">Ghosted</button>
+                </div>
+            </div>
+
+            <div id="applied-controls" class="tab-content" style="display: none;">
+                <div class="controls-row">
+                    <input type="text" class="search-box" id="applied-search" placeholder="Search your applied jobs...">
+                    <button class="update-btn" style="background: #059669;" onclick="exportAppliedJobs()">
+                        <span>📥</span>
+                        Export Applied Jobs CSV
+                    </button>
+                </div>
+                <div class="applied-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; margin-top: 12px;">
+                    <div class="stat-card" style="padding: 12px;">
+                        <span class="stat-number" id="applied-total">0</span>
+                        <span class="stat-label">Total Applied</span>
+                    </div>
+                    <div class="stat-card" style="padding: 12px;">
+                        <span class="stat-number" id="applied-pending">0</span>
+                        <span class="stat-label">Pending</span>
+                    </div>
+                    <div class="stat-card" style="padding: 12px;">
+                        <span class="stat-number" id="applied-interviews">0</span>
+                        <span class="stat-label">Interviews</span>
+                    </div>
+                    <div class="stat-card" style="padding: 12px;">
+                        <span class="stat-number" id="applied-offers">0</span>
+                        <span class="stat-label">Offers</span>
+                    </div>
+                    <div class="stat-card" style="padding: 12px;">
+                        <span class="stat-number" id="applied-rejected">0</span>
+                        <span class="stat-label">Rejected</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div id="update-status"></div>
-        <div id="job-sections"></div>
+        
+        <div id="browse-content" class="tab-content">
+            <div id="job-sections"></div>
+        </div>
+
+        <div id="applied-content" class="tab-content" style="display: none;">
+            <div id="applied-jobs-container"></div>
+        </div>
     </div>
 
     <script>
@@ -573,7 +718,9 @@
         let jobStatuses = {};
         let currentFilter = 'all';
         let searchTerm = '';
+        let appliedSearchTerm = '';
         let collapsedSections = new Set();
+        let currentTab = 'browse';
 
         const statusOptions = [
             { value: 'not-applied', label: 'Not Applied' },
@@ -740,10 +887,10 @@
                         roleText.includes('🇺🇸') || 
                         applicationCell.textContent.includes('🇺🇸');
                     
-                    // Clean up text
+                    // Clean up text - keep emojis for searchability
                     const cleanCompany = extractCompanyName(companyText);
-                    const cleanRole = roleText.replace(/🛂|🇺🇸|🔥/g, '').trim();
-                    const cleanLocation = locationText.replace(/🛂|🇺🇸/g, '').trim();
+                    const cleanRole = roleText.trim(); // Keep emojis in role names too
+                    const cleanLocation = locationText.replace(/🛂|🇺🇸/g, '').trim(); // Remove from location only
                     
                     // Validate job data
                     if (!cleanCompany || !cleanRole || cleanCompany.length < 2) {
@@ -778,8 +925,8 @@
             tempDiv.innerHTML = companyText;
             let text = tempDiv.textContent || tempDiv.innerText || '';
             
-            // Remove emojis and special characters
-            text = text.replace(/🔥|🛂|🇺🇸/g, '').trim();
+            // Keep emojis for searchability - only trim whitespace
+            text = text.trim();
             
             return text;
         }
@@ -847,15 +994,214 @@
             });
         }
 
-        // Toggle section collapse
-        function toggleSection(category) {
-            if (collapsedSections.has(category)) {
-                collapsedSections.delete(category);
+        // Switch between tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            
+            // Show/hide tab content
+            document.getElementById('browse-controls').style.display = tab === 'browse' ? 'block' : 'none';
+            document.getElementById('applied-controls').style.display = tab === 'applied' ? 'block' : 'none';
+            document.getElementById('browse-content').style.display = tab === 'browse' ? 'block' : 'none';
+            document.getElementById('applied-content').style.display = tab === 'applied' ? 'block' : 'none';
+            
+            if (tab === 'applied') {
+                renderAppliedJobs();
             } else {
-                collapsedSections.add(category);
+                renderJobs();
             }
-            saveAppData();
-            renderJobs();
+        }
+
+        // Get applied jobs with details
+        function getAppliedJobsWithDetails() {
+            return allJobs.filter(job => {
+                const status = getJobStatus(job.id);
+                return status !== 'not-applied';
+            }).map(job => {
+                const statusData = jobStatuses[job.id];
+                return {
+                    ...job,
+                    status: statusData?.status || 'applied',
+                    appliedDate: statusData?.lastUpdated ? new Date(statusData.lastUpdated).toLocaleDateString() : 'Unknown',
+                    statusDate: statusData?.lastUpdated ? new Date(statusData.lastUpdated).toLocaleDateString() : 'Unknown'
+                };
+            }).sort((a, b) => {
+                // Sort by status date, most recent first
+                const dateA = jobStatuses[a.id]?.lastUpdated ? new Date(jobStatuses[a.id].lastUpdated) : new Date(0);
+                const dateB = jobStatuses[b.id]?.lastUpdated ? new Date(jobStatuses[b.id].lastUpdated) : new Date(0);
+                return dateB - dateA;
+            });
+        }
+
+        // Update applied jobs statistics
+        function updateAppliedStats() {
+            const appliedJobsList = getAppliedJobsWithDetails();
+            const statusCounts = {
+                total: appliedJobsList.length,
+                pending: 0,
+                interviews: 0,
+                offers: 0,
+                rejected: 0
+            };
+
+            appliedJobsList.forEach(job => {
+                switch (job.status) {
+                    case 'applied':
+                    case 'oa-received':
+                    case 'oa-solved':
+                        statusCounts.pending++;
+                        break;
+                    case 'interview-call':
+                        statusCounts.interviews++;
+                        break;
+                    case 'offer':
+                        statusCounts.offers++;
+                        break;
+                    case 'rejected':
+                    case 'ghosted':
+                        statusCounts.rejected++;
+                        break;
+                }
+            });
+
+            document.getElementById('applied-total').textContent = statusCounts.total;
+            document.getElementById('applied-pending').textContent = statusCounts.pending;
+            document.getElementById('applied-interviews').textContent = statusCounts.interviews;
+            document.getElementById('applied-offers').textContent = statusCounts.offers;
+            document.getElementById('applied-rejected').textContent = statusCounts.rejected;
+        }
+
+        // Render applied jobs table
+        function renderAppliedJobs() {
+            let appliedJobsList = getAppliedJobsWithDetails();
+
+            // Apply search filter
+            if (appliedSearchTerm) {
+                const searchLower = appliedSearchTerm.toLowerCase();
+                appliedJobsList = appliedJobsList.filter(job => 
+                    job.company.toLowerCase().includes(searchLower) ||
+                    job.role.toLowerCase().includes(searchLower) ||
+                    job.location.toLowerCase().includes(searchLower) ||
+                    job.status.toLowerCase().includes(searchLower)
+                );
+            }
+
+            updateAppliedStats();
+
+            if (appliedJobsList.length === 0) {
+                document.getElementById('applied-jobs-container').innerHTML = `
+                    <div class="loading">
+                        ${appliedSearchTerm ? 'No applied jobs match your search.' : 'No applications yet. Start applying to jobs from the Browse Jobs tab!'}
+                    </div>
+                `;
+                return;
+            }
+
+            const tableHTML = `
+                <table class="applied-jobs-table">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Job Title</th>
+                            <th>Location</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Applied Date</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${appliedJobsList.map(job => {
+                            const statusClass = job.status.replace('-', '');
+                            const rowClass = job.status === 'offer' ? 'offer' : 
+                                            job.status === 'interview-call' ? 'interview' :
+                                            (job.status === 'rejected' || job.status === 'ghosted') ? 'rejected' : '';
+                            
+                            return `
+                                <tr class="applied-job-row ${rowClass}">
+                                    <td style="font-weight: 600;">${job.company}</td>
+                                    <td>${job.role}</td>
+                                    <td style="color: #6b7280;">${job.location}</td>
+                                    <td>
+                                        <span style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: #374151;">
+                                            ${job.category}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="applied-status-badge status-${statusClass}">
+                                            ${statusOptions.find(opt => opt.value === job.status)?.label || job.status}
+                                        </span>
+                                    </td>
+                                    <td style="color: #6b7280;">${job.appliedDate}</td>
+                                    <td style="color: #6b7280;">${job.statusDate}</td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            ${job.applicationUrl ? `<a href="${job.applicationUrl}" target="_blank" class="apply-btn" style="padding: 4px 8px; font-size: 11px;">View Job</a>` : ''}
+                                            <select class="status-select" onchange="updateJobStatus('${job.id}', this.value)" style="font-size: 11px; padding: 2px 4px;">
+                                                ${statusOptions.map(option => 
+                                                    `<option value="${option.value}" ${job.status === option.value ? 'selected' : ''}>${option.label}</option>`
+                                                ).join('')}
+                                            </select>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById('applied-jobs-container').innerHTML = tableHTML;
+        }
+
+        // Export applied jobs as CSV (similar to Simplify Jobs format)
+        function exportAppliedJobs() {
+            const appliedJobsList = getAppliedJobsWithDetails();
+            
+            if (appliedJobsList.length === 0) {
+                const statusDiv = document.getElementById('update-status');
+                statusDiv.innerHTML = '<div class="update-status update-error">❌ No applied jobs to export!</div>';
+                setTimeout(() => statusDiv.innerHTML = '', 3000);
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['Job Title', 'Company Name', 'Job URL', 'Applied Date', 'Status', 'Status Date', 'Category', 'Location', 'Notes'];
+            const csvContent = [
+                headers.join(','),
+                ...appliedJobsList.map(job => [
+                    `"${job.role}"`,
+                    `"${job.company}"`,
+                    `"${job.applicationUrl || ''}"`,
+                    `"${job.appliedDate}"`,
+                    `"${statusOptions.find(opt => opt.value === job.status)?.label || job.status}"`,
+                    `"${job.statusDate}"`,
+                    `"${job.category}"`,
+                    `"${job.location}"`,
+                    `""` // Notes column (empty for now)
+                ].join(','))
+            ].join('\n');
+
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `applied-jobs-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            // Show success message
+            const statusDiv = document.getElementById('update-status');
+            statusDiv.innerHTML = `<div class="update-status update-success">📥 Exported ${appliedJobsList.length} applied jobs to CSV!</div>`;
+            setTimeout(() => statusDiv.innerHTML = '', 3000);
         }
 
         // Render jobs
@@ -925,7 +1271,6 @@
             return jobs.map(job => {
                 const status = getJobStatus(job.id);
                 const isApplied = status !== 'not-applied';
-                const companyClass = job.noSponsorship ? 'no-sponsorship' : (job.usCitizenship ? 'us-citizenship' : '');
                 
                 return `
                     <tr class="job-row ${isApplied ? 'applied' : ''}" data-job-id="${job.id}">
@@ -934,7 +1279,7 @@
                                    ${isApplied ? 'checked' : ''} 
                                    onchange="toggleApplication('${job.id}')">
                         </td>
-                        <td class="company-cell ${companyClass}">${job.company}</td>
+                        <td class="company-cell">${job.company}</td>
                         <td class="role-cell">${job.role}</td>
                         <td class="location-cell">${job.location}</td>
                         <td class="status-cell">
