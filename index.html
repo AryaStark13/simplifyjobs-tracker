@@ -491,6 +491,7 @@
                         <li>🛂 Does NOT offer sponsorship</li>
                         <li>🇺🇸 Requires U.S. Citizenship</li>
                         <li>🔒 Job application is closed</li>
+                        <li>🔥 FAANG+ company</li>
                     </ul>
                 </div>
             </div>
@@ -608,139 +609,154 @@
             return `${job.company}-${job.role}-${job.location}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
         }
 
-        // Parse job data from README content
+        // Parse job data from README content (FIXED for HTML tables)
         function parseJobData(readmeContent) {
             const jobs = [];
             
             // Parse AI/ML jobs
             const aimlSection = readmeContent.match(/## 🤖 Data Science, AI & Machine Learning New Grad Roles[\s\S]*?(?=## |$)/);
             if (aimlSection) {
-                const aimlJobs = parseJobTable(aimlSection[0], 'AI/ML');
+                const aimlJobs = parseHTMLJobTable(aimlSection[0], 'AI/ML');
                 jobs.push(...aimlJobs);
             }
 
             // Parse Software Engineering jobs
             const sweSection = readmeContent.match(/## 💻 Software Engineering New Grad Roles[\s\S]*?(?=## |$)/);
             if (sweSection) {
-                const sweJobs = parseJobTable(sweSection[0], 'Software Engineering');
+                const sweJobs = parseHTMLJobTable(sweSection[0], 'Software Engineering');
                 jobs.push(...sweJobs);
+            }
+
+            // Parse Product Management jobs
+            const pmSection = readmeContent.match(/## 📱 Product Management New Grad Roles[\s\S]*?(?=## |$)/);
+            if (pmSection) {
+                const pmJobs = parseHTMLJobTable(pmSection[0], 'Product Management');
+                jobs.push(...pmJobs);
             }
 
             // Parse Quantitative Finance jobs
             const quantSection = readmeContent.match(/## 📈 Quantitative Finance New Grad Roles[\s\S]*?(?=## |$)/);
             if (quantSection) {
-                const quantJobs = parseJobTable(quantSection[0], 'Quantitative Finance');
+                const quantJobs = parseHTMLJobTable(quantSection[0], 'Quantitative Finance');
                 jobs.push(...quantJobs);
             }
 
             // Parse Hardware Engineering jobs
             const hwSection = readmeContent.match(/## 🔧 Hardware Engineering New Grad Roles[\s\S]*?(?=## |$)/);
             if (hwSection) {
-                const hwJobs = parseJobTable(hwSection[0], 'Hardware Engineering');
+                const hwJobs = parseHTMLJobTable(hwSection[0], 'Hardware Engineering');
                 jobs.push(...hwJobs);
             }
 
-            return jobs;
-        }
-
-        // Parse individual job table
-        function parseJobTable(sectionContent, category) {
-            const jobs = [];
-            const lines = sectionContent.split('\n');
-            let inTable = false;
-            let headerFound = false;
-            
-            for (let line of lines) {
-                line = line.trim();
-                if (!line) continue;
-                
-                if (line.startsWith('|')) {
-                    inTable = true;
-                    
-                    if (!headerFound && line.includes('Company') && line.includes('Role')) {
-                        headerFound = true;
-                        continue;
-                    }
-                    
-                    if (line.includes('---') || line.includes('===')) {
-                        continue;
-                    }
-                    
-                    if (headerFound) {
-                        const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
-                        
-                        if (cells.length >= 4) {
-                            let company, role, location, applicationCell, age;
-                            
-                            if (cells.length === 5) {
-                                [company, role, location, applicationCell, age] = cells;
-                            } else if (cells.length === 4) {
-                                [company, role, location, applicationCell] = cells;
-                                age = 'N/A';
-                            } else {
-                                company = cells[0];
-                                role = cells[1];
-                                location = cells[2];
-                                applicationCell = cells[3];
-                                age = cells[4] || 'N/A';
-                            }
-
-                            if (applicationCell.includes('🔒')) continue;
-                            
-                            if (company.includes('↳')) {
-                                if (jobs.length > 0) {
-                                    company = jobs[jobs.length - 1].company;
-                                } else {
-                                    continue;
-                                }
-                            }
-
-                            const urlMatch = applicationCell.match(/href="([^"]+)"/);
-                            const applicationUrl = urlMatch ? urlMatch[1] : '';
-
-                            const noSponsorship = role.includes('🛂') || applicationCell.includes('🛂') || company.includes('🛂');
-                            const usCitizenship = role.includes('🇺🇸') || applicationCell.includes('🇺🇸') || company.includes('🇺🇸');
-
-                            const cleanCompany = extractCompanyName(company);
-                            const cleanRole = role.replace(/🛂|🇺🇸/g, '').trim();
-                            const cleanLocation = location.replace(/🛂|🇺🇸/g, '').trim();
-
-                            if (!cleanCompany || !cleanRole || cleanCompany.length < 2) continue;
-
-                            jobs.push({
-                                category,
-                                company: cleanCompany,
-                                role: cleanRole,
-                                location: cleanLocation,
-                                applicationUrl,
-                                age: age || 'N/A',
-                                noSponsorship,
-                                usCitizenship,
-                                id: generateJobId({ company: cleanCompany, role: cleanRole, location: cleanLocation })
-                            });
-                        }
-                    }
-                } else if (inTable) {
-                    break;
-                }
+            // Parse Other jobs
+            const otherSection = readmeContent.match(/## 💼 Other New Grad Roles[\s\S]*?(?=## |$)/);
+            if (otherSection) {
+                const otherJobs = parseHTMLJobTable(otherSection[0], 'Other');
+                jobs.push(...otherJobs);
             }
 
             return jobs;
         }
 
-        function extractCompanyName(companyCell) {
-            if (companyCell.includes('↳')) return '';
+        // Parse HTML job table (FIXED)
+        function parseHTMLJobTable(sectionContent, category) {
+            const jobs = [];
             
-            const boldLinkMatch = companyCell.match(/\*\*\[(.*?)\]/);
-            if (boldLinkMatch) return boldLinkMatch[1];
+            // Create a temporary div to parse HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = sectionContent;
             
-            const linkMatch = companyCell.match(/\[(.*?)\]/);
-            if (linkMatch) return linkMatch[1];
+            // Find the table
+            const table = tempDiv.querySelector('table');
+            if (!table) {
+                console.log(`No table found for ${category}`);
+                return jobs;
+            }
             
-            const boldMatch = companyCell.match(/\*\*(.*?)\*\*/);
-            if (boldMatch) return boldMatch[1];
+            // Get all table rows, skip the header row
+            const rows = table.querySelectorAll('tbody tr');
             
-            return companyCell.replace(/\*\*/g, '').replace(/\[|\]/g, '').trim();
+            let lastCompany = '';
+            
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                
+                if (cells.length >= 4) {
+                    let companyText = cells[0].textContent.trim();
+                    const roleText = cells[1].textContent.trim();
+                    const locationText = cells[2].textContent.trim();
+                    const applicationCell = cells[3];
+                    const ageText = cells.length > 4 ? cells[4].textContent.trim() : 'N/A';
+                    
+                    // Skip if application is closed
+                    if (applicationCell.textContent.includes('🔒')) {
+                        return;
+                    }
+                    
+                    // Handle continuation rows (↳)
+                    if (companyText.includes('↳')) {
+                        companyText = lastCompany;
+                    } else {
+                        lastCompany = companyText;
+                    }
+                    
+                    // Extract application URL
+                    const linkElement = applicationCell.querySelector('a');
+                    const applicationUrl = linkElement ? linkElement.href : '';
+                    
+                    // Check for flags
+                    const noSponsorship = 
+                        companyText.includes('🛂') || 
+                        roleText.includes('🛂') || 
+                        applicationCell.textContent.includes('🛂');
+                    
+                    const usCitizenship = 
+                        companyText.includes('🇺🇸') || 
+                        roleText.includes('🇺🇸') || 
+                        applicationCell.textContent.includes('🇺🇸');
+                    
+                    // Clean up text
+                    const cleanCompany = extractCompanyName(companyText);
+                    const cleanRole = roleText.replace(/🛂|🇺🇸|🔥/g, '').trim();
+                    const cleanLocation = locationText.replace(/🛂|🇺🇸/g, '').trim();
+                    
+                    // Validate job data
+                    if (!cleanCompany || !cleanRole || cleanCompany.length < 2) {
+                        return;
+                    }
+                    
+                    const job = {
+                        category,
+                        company: cleanCompany,
+                        role: cleanRole,
+                        location: cleanLocation,
+                        applicationUrl,
+                        age: ageText || 'N/A',
+                        noSponsorship,
+                        usCitizenship,
+                        id: generateJobId({ company: cleanCompany, role: cleanRole, location: cleanLocation })
+                    };
+                    
+                    jobs.push(job);
+                }
+            });
+            
+            console.log(`Parsed ${jobs.length} jobs for ${category}`);
+            return jobs;
+        }
+
+        function extractCompanyName(companyText) {
+            if (companyText.includes('↳')) return '';
+            
+            // Remove HTML tags and extract text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = companyText;
+            let text = tempDiv.textContent || tempDiv.innerText || '';
+            
+            // Remove emojis and special characters
+            text = text.replace(/🔥|🛂|🇺🇸/g, '').trim();
+            
+            return text;
         }
 
         // Get job status
@@ -829,12 +845,14 @@
                 jobsByCategory[job.category].push(job);
             });
 
-            const categoryOrder = ['AI/ML', 'Software Engineering', 'Quantitative Finance', 'Hardware Engineering'];
+            const categoryOrder = ['AI/ML', 'Software Engineering', 'Product Management', 'Quantitative Finance', 'Hardware Engineering', 'Other'];
             const categoryIcons = {
                 'AI/ML': '🤖',
                 'Software Engineering': '💻',
+                'Product Management': '📱',
                 'Quantitative Finance': '📈',
-                'Hardware Engineering': '🔧'
+                'Hardware Engineering': '🔧',
+                'Other': '💼'
             };
 
             let html = '';
@@ -883,17 +901,6 @@
                 const status = getJobStatus(job.id);
                 const isApplied = status !== 'not-applied';
                 const companyClass = job.noSponsorship ? 'no-sponsorship' : (job.usCitizenship ? 'us-citizenship' : '');
-                
-                const statusOptions = [
-                    { value: 'not-applied', label: 'Not Applied' },
-                    { value: 'applied', label: 'Applied' },
-                    { value: 'oa-received', label: 'OA Received' },
-                    { value: 'oa-solved', label: 'OA Solved' },
-                    { value: 'interview-call', label: 'Interview Call' },
-                    { value: 'offer', label: 'Offer' },
-                    { value: 'rejected', label: 'Rejected' },
-                    { value: 'ghosted', label: 'Ghosted' }
-                ];
                 
                 return `
                     <tr class="job-row ${isApplied ? 'applied' : ''}" data-job-id="${job.id}">
@@ -957,7 +964,10 @@
                 }
                 
                 const readmeContent = await response.text();
+                console.log('README content length:', readmeContent.length);
+                
                 allJobs = parseJobData(readmeContent);
+                console.log('Total jobs parsed:', allJobs.length);
                 
                 // Save to localStorage for offline access
                 localStorage.setItem('cachedJobs', JSON.stringify(allJobs));
@@ -967,7 +977,7 @@
                 checkGhostedApplications();
                 
                 renderJobs();
-                statusDiv.innerHTML = '<div class="update-status update-success">✅ Successfully updated job listings!</div>';
+                statusDiv.innerHTML = `<div class="update-status update-success">✅ Successfully updated ${allJobs.length} job listings!</div>`;
                 
                 // Clear status after 3 seconds
                 setTimeout(() => {
